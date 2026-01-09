@@ -23,12 +23,7 @@ cd Colo-colo
 
 #### Installation des dépendances Python
 
-```bash
-cd backend
-pip install -r requirements.txt
-```
-
-Ou avec un environnement virtuel (recommandé) :
+Il est recommandé d'utiliser un environnement virtuel :
 
 ```bash
 cd backend
@@ -38,6 +33,13 @@ venv\Scripts\activate
 # Sur macOS/Linux :
 source venv/bin/activate
 
+pip install -r requirements.txt
+```
+
+Ou installation globale (non recommandé) :
+
+```bash
+cd backend
 pip install -r requirements.txt
 ```
 
