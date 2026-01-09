@@ -51,6 +51,9 @@ class GradeViewSet(viewsets.ModelViewSet):
 
 @api_view(['GET'])
 def grades_by_student(request):
-    """API endpoint to get grades organized by student"""
+    """
+    API endpoint to get grades organized by student.
+    Returns a dictionary mapping student IDs to their grades by subject.
+    """
     serializer = GradesByStudentSerializer(None)
     return Response(serializer.to_representation(None))
