@@ -1,0 +1,35 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Fond dégradé -->
+  <defs>
+    <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#06b6d4;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#10b981;stop-opacity:1" />
+    </linearGradient>
+    <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="4" stdDeviation="3" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+  
+  <!-- Cercle de base -->
+  <circle cx="100" cy="100" r="95" fill="url(#logoGrad)" filter="url(#shadow)"/>
+  
+  <!-- Livre/Pages -->
+  <g transform="translate(100, 100)">
+    <!-- Première page -->
+    <rect x="-35" y="-40" width="50" height="70" fill="#ffffff" rx="4" filter="url(#shadow)"/>
+    
+    <!-- Deuxième page -->
+    <rect x="-15" y="-35" width="50" height="70" fill="#f0f9ff" rx="4" transform="rotate(-15 -15 0)"/>
+    
+    <!-- Troisième page -->
+    <rect x="15" y="-30" width="50" height="70" fill="#e0f2fe" rx="4" transform="rotate(15 15 0)"/>
+    
+    <!-- Accent de couleur - stylo/crayon -->
+    <circle cx="30" cy="30" r="8" fill="#f97316" filter="url(#shadow)"/>
+    <line x1="30" y1="30" x2="0" y2="0" stroke="#f97316" stroke-width="3" stroke-linecap="round"/>
+  </g>
+  
+  <!-- Texte extérieur -->
+  <text x="100" y="185" text-anchor="middle" font-family="Poppins, sans-serif" font-size="14" font-weight="bold" fill="#ffffff" letter-spacing="2">COLO-COLO</text>
+</svg>

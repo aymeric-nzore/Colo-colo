@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "artboards": [
+    {
+      "name": "Artboard",
+      "width": 400,
+      "height": 300,
+      "shapes": [
+        {
+          "type": "ellipse",
+          "x": 50,
+          "y": 50,
+          "width": 100,
+          "height": 100,
+          "fill": "#3b82f6",
+          "animation": {
+            "name": "pulse",
+            "duration": 2000,
+            "loop": true,
+            "keyframes": [
+              {"time": 0, "scale": 1, "opacity": 1},
+              {"time": 0.5, "scale": 1.1, "opacity": 0.8},
+              {"time": 1, "scale": 1, "opacity": 1}
+            ]
+          }
+        },
+        {
+          "type": "ellipse",
+          "x": 250,
+          "y": 100,
+          "width": 80,
+          "height": 80,
+          "fill": "#06b6d4",
+          "animation": {
+            "name": "float",
+            "duration": 3000,
+            "loop": true,
+            "keyframes": [
+              {"time": 0, "y": 100},
+              {"time": 0.5, "y": 80},
+              {"time": 1, "y": 100}
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "animations": [
+    {
+      "name": "pulse",
+      "trackGroup": 0,
+      "tracks": [
+        {
+          "property": "scale",
+          "keyframes": [
+            {"time": 0, "value": 1},
+            {"time": 1000, "value": 1.1},
+            {"time": 2000, "value": 1}
+          ]
+        }
+      ]
+    },
+    {
+      "name": "float",
+      "trackGroup": 0,
+      "tracks": [
+        {
+          "property": "y",
+          "keyframes": [
+            {"time": 0, "value": 100},
+            {"time": 1500, "value": 80},
+            {"time": 3000, "value": 100}
+          ]
+        }
+      ]
+    }
+  ]
+}
