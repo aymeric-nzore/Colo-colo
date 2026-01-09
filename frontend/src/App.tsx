@@ -15,26 +15,73 @@ import {
   Divider,
   Paper,
   InputAdornment,
+  CircularProgress,
+  Alert,
 } from '@mui/material'
 import { gsap } from 'gsap'
 import { MdEmail, MdLock, MdSchool, MdVerified } from 'react-icons/md'
 import { FiLogIn } from 'react-icons/fi'
 import './App.css'
-import {
-  departments,
-  subjects,
-  rooms,
-  teachers,
-  students,
-  gradesByStudent,
-} from './mockData'
 import { computeDepartmentAverage, computeStudentAverage, computeSubjectAverage } from './utils/grades'
 import type { Role, Student } from './types'
 import { useAuthStore } from './authStore'
+import { useDataStore } from './dataStore'
 import { RiveHero } from './RiveHero'
 import { RiveShowcase } from './RiveShowcase'
 
 const DEFAULT_STUDENT_SUBJECT_IDS: string[] = ['mat-1', 'mat-3', 'mat-7']
+
+const DataLoader = ({ children }: { children: React.ReactNode }) => {
+  const { isLoading, error, fetchAllData } = useDataStore()
+
+  useEffect(() => {
+    fetchAllData()
+  }, [fetchAllData])
+
+  if (isLoading) {
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '100vh',
+          flexDirection: 'column',
+          gap: 2,
+        }}
+      >
+        <CircularProgress size={60} />
+        <Typography variant="h6">Chargement des données...</Typography>
+      </Box>
+    )
+  }
+
+  if (error) {
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '100vh',
+          p: 3,
+        }}
+      >
+        <Alert severity="error" sx={{ maxWidth: 600 }}>
+          <Typography variant="h6" gutterBottom>
+            Erreur de chargement
+          </Typography>
+          <Typography>{error}</Typography>
+          <Button variant="contained" onClick={fetchAllData} sx={{ mt: 2 }}>
+            Réessayer
+          </Button>
+        </Alert>
+      </Box>
+    )
+  }
+
+  return <>{children}</>
+}
 
 const getNavItemsForRole = (role: Role | null | undefined) => {
   if (role === 'student') {
@@ -98,6 +145,8 @@ const PageContainer = ({ title, children }: { title: string; children: React.Rea
 }
 
 const Dashboard = () => {
+  const { departments, teachers, students, subjects, gradesByStudent } = useDataStore()
+
   useEffect(() => {
     gsap.from('.stat-card', { y: 30, opacity: 0, duration: 0.6, stagger: 0.1, ease: 'power2.out' })
   }, [])
@@ -106,7 +155,7 @@ const Dashboard = () => {
     const all = students.map((student) => computeStudentAverage(student.id, gradesByStudent, subjects))
     const valid = all.filter((a) => a !== null) as number[]
     return valid.length ? (valid.reduce((s, n) => s + n, 0) / valid.length).toFixed(2) : 'N/A'
-  }, [])
+  }, [students, gradesByStudent, subjects])
 
   return (
     <PageContainer title="Tableau de bord">
@@ -193,33 +242,38 @@ const Dashboard = () => {
   )
 }
 
-const DepartmentsPage = () => (
-  <PageContainer title="Départements">
-    <Box display="grid" gridTemplateColumns={{ xs: '1fr', md: 'repeat(2, 1fr)' }} gap={2}>
-      {departments.map((dept) => {
-        const responsible = teachers.find((t) => t.id === dept.responsibleId)
-        const deptSubjects = subjects.filter((s) => s.departmentId === dept.id)
-        return (
-          <Card className="hover-card" key={dept.id}>
-            <CardContent>
-              <Typography variant="h6">{dept.name}</Typography>
-              <Typography variant="body2" color="text.secondary" gutterBottom>
-                Responsable : {responsible ? `${responsible.firstName} ${responsible.lastName}` : 'Non défini'}
-              </Typography>
-              <Stack direction="row" spacing={1} flexWrap="wrap">
-                {deptSubjects.map((s) => (
-                  <Chip key={s.id} label={s.name} size="small" />
-                ))}
-              </Stack>
-            </CardContent>
-          </Card>
-        )
-      })}
-    </Box>
-  </PageContainer>
-)
+const DepartmentsPage = () => {
+  const { departments, teachers, subjects } = useDataStore()
+
+  return (
+    <PageContainer title="Départements">
+      <Box display="grid" gridTemplateColumns={{ xs: '1fr', md: 'repeat(2, 1fr)' }} gap={2}>
+        {departments.map((dept) => {
+          const responsible = teachers.find((t) => t.id === dept.responsibleId)
+          const deptSubjects = subjects.filter((s) => s.departmentId === dept.id)
+          return (
+            <Card className="hover-card" key={dept.id}>
+              <CardContent>
+                <Typography variant="h6">{dept.name}</Typography>
+                <Typography variant="body2" color="text.secondary" gutterBottom>
+                  Responsable : {responsible ? `${responsible.firstName} ${responsible.lastName}` : 'Non défini'}
+                </Typography>
+                <Stack direction="row" spacing={1} flexWrap="wrap">
+                  {deptSubjects.map((s) => (
+                    <Chip key={s.id} label={s.name} size="small" />
+                  ))}
+                </Stack>
+              </CardContent>
+            </Card>
+          )
+        })}
+      </Box>
+    </PageContainer>
+  )
+}
 
 const TeachersPage = () => {
+  const { teachers, subjects, departments } = useDataStore()
   const navigate = useNavigate()
   return (
     <PageContainer title="Enseignants">
@@ -269,6 +323,7 @@ const TeachersPage = () => {
 }
 
 const StudentCard = ({ student }: { student: Student }) => {
+  const { subjects, gradesByStudent } = useDataStore()
   const avg = computeStudentAverage(student.id, gradesByStudent, subjects)
   const missing = subjects.filter((s) => student.subjectIds.includes(s.id) && !gradesByStudent[student.id]?.[s.id])
   return (
@@ -303,6 +358,7 @@ const StudentCard = ({ student }: { student: Student }) => {
 
 const StudentsPage = () => {
   const user = useAuthStore((s) => s.user)
+  const { students } = useDataStore()
   const visibleStudents: Student[] = useMemo(() => {
     if (!user) return []
     if (user.role === 'student') {
@@ -322,7 +378,7 @@ const StudentsPage = () => {
       ]
     }
     return students
-  }, [user])
+  }, [user, students])
 
   return (
     <PageContainer title={user?.role === 'student' ? 'Mon dossier élève' : 'Étudiants'}>
@@ -337,6 +393,7 @@ const StudentsPage = () => {
 
 const SubjectsRoomsPage = () => {
   const user = useAuthStore((s) => s.user)
+  const { subjects, rooms, teachers, students } = useDataStore()
 
   const visibleSubjects = useMemo(() => {
     if (user?.role === 'student') {
@@ -346,7 +403,7 @@ const SubjectsRoomsPage = () => {
       return subjects.filter((subject) => subjectIds.includes(subject.id))
     }
     return subjects
-  }, [user])
+  }, [user, subjects, students])
 
   return (
     <PageContainer title="Matières & salles">
@@ -424,6 +481,7 @@ const AdminPage = () => (
 const StudentProfilePage = () => {
   const user = useAuthStore((s) => s.user)
   const updatePhoto = useAuthStore((s) => s.updatePhoto)
+  const { students, subjects, rooms, teachers, gradesByStudent } = useDataStore()
 
   const student = useMemo(
     () => {
@@ -441,7 +499,7 @@ const StudentProfilePage = () => {
         subjectIds: DEFAULT_STUDENT_SUBJECT_IDS,
       } as Student
     },
-    [user],
+    [user, students],
   )
 
   if (!user || !student) {
@@ -1211,15 +1269,16 @@ function App() {
   return (
     <BrowserRouter>
       <AppShell>
-        <Routes>
-          <Route
-            path="/"
-            element={
-              <RequireAuth>
-                <RequireRole roles={['teacher', 'admin']}>
-                  <Dashboard />
-                </RequireRole>
-              </RequireAuth>
+        <DataLoader>
+          <Routes>
+            <Route
+              path="/"
+              element={
+                <RequireAuth>
+                  <RequireRole roles={['teacher', 'admin']}>
+                    <Dashboard />
+                  </RequireRole>
+                </RequireAuth>
             }
           />
           <Route
@@ -1280,6 +1339,7 @@ function App() {
           />
           <Route path="/auth" element={<AuthPage />} />
         </Routes>
+        </DataLoader>
       </AppShell>
     </BrowserRouter>
   )
