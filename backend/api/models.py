@@ -1,11 +1,44 @@
 from django.db import models
+from django.contrib.auth.models import AbstractUser
+
+
+class User(AbstractUser):
+    """Custom user model with roles"""
+    ROLE_CHOICES = [
+        ('admin', 'Administration'),
+        ('teacher', 'Enseignant'),
+        ('student', 'Élève'),
+        ('dept_head', 'Responsable Département'),
+    ]
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='student')
+    phone = models.CharField(max_length=20, blank=True)
+    
+    class Meta:
+        db_table = 'users'
+
+
+class College(models.Model):
+    """College model - represents a school/college"""
+    id = models.CharField(max_length=50, primary_key=True)
+    name = models.CharField(max_length=200)
+    address = models.TextField()
+    phone = models.CharField(max_length=20)
+    
+    class Meta:
+        db_table = 'colleges'
+    
+    def __str__(self):
+        return self.name
 
 
 class Department(models.Model):
     """Academic department model"""
     id = models.CharField(max_length=50, primary_key=True)
     name = models.CharField(max_length=200)
-    responsible_id = models.CharField(max_length=50)
+    code = models.CharField(max_length=20, unique=True)
+    college = models.ForeignKey(College, on_delete=models.CASCADE, related_name='departments')
+    responsible = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, 
+                                   related_name='managed_department', limit_choices_to={'role': 'dept_head'})
 
     class Meta:
         db_table = 'departments'
@@ -43,7 +76,7 @@ class Subject(models.Model):
 
 class Teacher(models.Model):
     """Teacher model"""
-    id = models.CharField(max_length=50, primary_key=True)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True, limit_choices_to={'role__in': ['teacher', 'dept_head']})
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
     phone = models.CharField(max_length=20)
@@ -62,7 +95,7 @@ class Teacher(models.Model):
 
 class Student(models.Model):
     """Student model"""
-    id = models.CharField(max_length=50, primary_key=True)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True, limit_choices_to={'role': 'student'})
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
     phone = models.CharField(max_length=20)
@@ -82,6 +115,9 @@ class Grade(models.Model):
     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='grades')
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='grades')
     grade = models.FloatField()
+    teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True, related_name='grades_assigned')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = 'grades'
@@ -89,3 +125,84 @@ class Grade(models.Model):
 
     def __str__(self):
         return f"{self.student} - {self.subject}: {self.grade}"
+
+
+class Attendance(models.Model):
+    """Attendance model - tracks student presence/absence"""
+    STATUS_CHOICES = [
+        ('present', 'Présent'),
+        ('absent', 'Absent'),
+    ]
+    
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='attendances')
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='attendances')
+    teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True, related_name='attendances_marked')
+    date = models.DateField()
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='present')
+    hours = models.IntegerField(default=1, help_text="Number of hours for this session")
+    notes = models.TextField(blank=True)
+    
+    class Meta:
+        db_table = 'attendances'
+        unique_together = ['student', 'subject', 'date']
+        ordering = ['-date']
+    
+    def __str__(self):
+        return f"{self.student} - {self.subject} - {self.date}: {self.status}"
+
+
+class CourseMaterial(models.Model):
+    """Course materials and exercises"""
+    TYPE_CHOICES = [
+        ('course', 'Cours'),
+        ('exercise', 'Exercice'),
+        ('document', 'Document'),
+    ]
+    
+    title = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='course')
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='materials')
+    teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='materials_created')
+    file = models.FileField(upload_to='course_materials/', blank=True, null=True)
+    file_url = models.URLField(blank=True, help_text="External file URL if not uploaded")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'course_materials'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.subject} - {self.title}"
+
+
+class Timetable(models.Model):
+    """Schedule/Timetable for classes"""
+    WEEKDAY_CHOICES = [
+        (0, 'Lundi'),
+        (1, 'Mardi'),
+        (2, 'Mercredi'),
+        (3, 'Jeudi'),
+        (4, 'Vendredi'),
+        (5, 'Samedi'),
+        (6, 'Dimanche'),
+    ]
+    
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='timetable_slots')
+    teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='timetable_slots')
+    room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='timetable_slots')
+    weekday = models.IntegerField(choices=WEEKDAY_CHOICES)
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+    
+    class Meta:
+        db_table = 'timetables'
+        ordering = ['weekday', 'start_time']
+        unique_together = [
+            ['room', 'weekday', 'start_time'],  # Room can't be double-booked
+            ['teacher', 'weekday', 'start_time'],  # Teacher can't be double-booked
+        ]
+    
+    def __str__(self):
+        return f"{self.get_weekday_display()} {self.start_time}-{self.end_time}: {self.subject} ({self.room})"

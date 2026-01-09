@@ -1,14 +1,33 @@
 from rest_framework import serializers
-from .models import Department, Teacher, Student, Subject, Room, Grade
+from .models import (
+    User, College, Department, Teacher, Student, Subject, Room, Grade,
+    Attendance, CourseMaterial, Timetable
+)
+
+
+class UserSerializer(serializers.ModelSerializer):
+    """Serializer for User model"""
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'role', 'phone']
+        extra_kwargs = {'password': {'write_only': True}}
+
+
+class CollegeSerializer(serializers.ModelSerializer):
+    """Serializer for College model"""
+    class Meta:
+        model = College
+        fields = ['id', 'name', 'address', 'phone']
 
 
 class DepartmentSerializer(serializers.ModelSerializer):
     """Serializer for Department model"""
-    responsibleId = serializers.CharField(source='responsible_id')
-
+    responsibleId = serializers.IntegerField(source='responsible_id', allow_null=True, required=False)
+    collegeId = serializers.CharField(source='college_id')
+    
     class Meta:
         model = Department
-        fields = ['id', 'name', 'responsibleId']
+        fields = ['id', 'name', 'code', 'collegeId', 'responsibleId']
 
 
 class RoomSerializer(serializers.ModelSerializer):
@@ -30,10 +49,11 @@ class SubjectSerializer(serializers.ModelSerializer):
 
 class TeacherSerializer(serializers.ModelSerializer):
     """Serializer for Teacher model"""
+    id = serializers.IntegerField(source='user_id', read_only=True)
     firstName = serializers.CharField(source='first_name')
     lastName = serializers.CharField(source='last_name')
     startDate = serializers.CharField(source='start_date')
-    subjectId = serializers.CharField(source='subject_id')
+    subjectId = serializers.CharField(source='subject_id', allow_null=True, required=False)
     departmentId = serializers.CharField(source='department_id')
 
     class Meta:
@@ -43,6 +63,7 @@ class TeacherSerializer(serializers.ModelSerializer):
 
 class StudentSerializer(serializers.ModelSerializer):
     """Serializer for Student model"""
+    id = serializers.IntegerField(source='user_id', read_only=True)
     firstName = serializers.CharField(source='first_name')
     lastName = serializers.CharField(source='last_name')
     entryYear = serializers.IntegerField(source='entry_year')
@@ -58,12 +79,13 @@ class StudentSerializer(serializers.ModelSerializer):
 
 class GradeSerializer(serializers.ModelSerializer):
     """Serializer for Grade model"""
-    studentId = serializers.CharField(source='student_id')
+    studentId = serializers.IntegerField(source='student_id')
     subjectId = serializers.CharField(source='subject_id')
+    teacherId = serializers.IntegerField(source='teacher_id', allow_null=True, required=False)
 
     class Meta:
         model = Grade
-        fields = ['id', 'studentId', 'subjectId', 'grade']
+        fields = ['id', 'studentId', 'subjectId', 'grade', 'teacherId', 'created_at', 'updated_at']
 
 
 class GradesByStudentSerializer(serializers.Serializer):
@@ -79,3 +101,47 @@ class GradesByStudentSerializer(serializers.Serializer):
                 result[student_id] = {}
             result[student_id][subject_id] = grade.grade
         return result
+
+
+class AttendanceSerializer(serializers.ModelSerializer):
+    """Serializer for Attendance model"""
+    studentId = serializers.IntegerField(source='student_id')
+    subjectId = serializers.CharField(source='subject_id')
+    teacherId = serializers.IntegerField(source='teacher_id', allow_null=True, required=False)
+    
+    class Meta:
+        model = Attendance
+        fields = ['id', 'studentId', 'subjectId', 'teacherId', 'date', 'status', 'hours', 'notes']
+
+
+class CourseMaterialSerializer(serializers.ModelSerializer):
+    """Serializer for Course Material model"""
+    subjectId = serializers.CharField(source='subject_id')
+    teacherId = serializers.IntegerField(source='teacher_id')
+    fileUrl = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = CourseMaterial
+        fields = ['id', 'title', 'description', 'type', 'subjectId', 'teacherId', 
+                  'fileUrl', 'created_at', 'updated_at']
+    
+    def get_fileUrl(self, obj):
+        if obj.file:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.file.url)
+            return obj.file.url
+        return obj.file_url
+
+
+class TimetableSerializer(serializers.ModelSerializer):
+    """Serializer for Timetable model"""
+    subjectId = serializers.CharField(source='subject_id')
+    teacherId = serializers.IntegerField(source='teacher_id')
+    roomId = serializers.CharField(source='room_id')
+    weekdayName = serializers.CharField(source='get_weekday_display', read_only=True)
+    
+    class Meta:
+        model = Timetable
+        fields = ['id', 'subjectId', 'teacherId', 'roomId', 'weekday', 'weekdayName', 
+                  'start_time', 'end_time']
