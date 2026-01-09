@@ -74,7 +74,7 @@ class AttendanceViewSet(viewsets.ModelViewSet):
     serializer_class = AttendanceSerializer
     
     @action(detail=False, methods=['get'])
-    def by_student(self, request, pk=None):
+    def by_student(self, request):
         """Get attendance records for a specific student"""
         student_id = request.query_params.get('student_id')
         if student_id:

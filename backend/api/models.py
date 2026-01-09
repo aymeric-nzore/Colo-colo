@@ -4,13 +4,19 @@ from django.contrib.auth.models import AbstractUser
 
 class User(AbstractUser):
     """Custom user model with roles"""
+    # Role constants
+    ADMIN = 'admin'
+    TEACHER = 'teacher'
+    STUDENT = 'student'
+    DEPT_HEAD = 'dept_head'
+    
     ROLE_CHOICES = [
-        ('admin', 'Administration'),
-        ('teacher', 'Enseignant'),
-        ('student', 'Élève'),
-        ('dept_head', 'Responsable Département'),
+        (ADMIN, 'Administration'),
+        (TEACHER, 'Enseignant'),
+        (STUDENT, 'Élève'),
+        (DEPT_HEAD, 'Responsable Département'),
     ]
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='student')
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default=STUDENT)
     phone = models.CharField(max_length=20, blank=True)
     
     class Meta:
@@ -38,7 +44,7 @@ class Department(models.Model):
     code = models.CharField(max_length=20, unique=True)
     college = models.ForeignKey(College, on_delete=models.CASCADE, related_name='departments')
     responsible = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, 
-                                   related_name='managed_department', limit_choices_to={'role': 'dept_head'})
+                                   related_name='managed_department', limit_choices_to={'role': User.DEPT_HEAD})
 
     class Meta:
         db_table = 'departments'
@@ -76,7 +82,8 @@ class Subject(models.Model):
 
 class Teacher(models.Model):
     """Teacher model"""
-    user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True, limit_choices_to={'role__in': ['teacher', 'dept_head']})
+    user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True, 
+                               limit_choices_to={'role__in': [User.TEACHER, User.DEPT_HEAD]})
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
     phone = models.CharField(max_length=20)
@@ -95,7 +102,8 @@ class Teacher(models.Model):
 
 class Student(models.Model):
     """Student model"""
-    user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True, limit_choices_to={'role': 'student'})
+    user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True, 
+                               limit_choices_to={'role': User.STUDENT})
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
     phone = models.CharField(max_length=20)

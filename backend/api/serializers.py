@@ -9,8 +9,17 @@ class UserSerializer(serializers.ModelSerializer):
     """Serializer for User model"""
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'role', 'phone']
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'role', 'phone', 'password']
         extra_kwargs = {'password': {'write_only': True}}
+    
+    def create(self, validated_data):
+        """Create user with encrypted password"""
+        password = validated_data.pop('password', None)
+        user = User(**validated_data)
+        if password:
+            user.set_password(password)
+        user.save()
+        return user
 
 
 class CollegeSerializer(serializers.ModelSerializer):
