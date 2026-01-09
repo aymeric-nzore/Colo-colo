@@ -15,6 +15,14 @@ async function apiFetch<T>(endpoint: string): Promise<T> {
 }
 
 /**
+ * Fetch paginated results and return the results array
+ */
+async function apiFetchPaginated<T>(endpoint: string): Promise<T[]> {
+  const data = await apiFetch<{ results: T[] }>(endpoint)
+  return data.results
+}
+
+/**
  * API service for fetching data from the Django backend
  */
 export const api = {
@@ -22,35 +30,35 @@ export const api = {
    * Fetch all departments
    */
   async getDepartments(): Promise<Department[]> {
-    return apiFetch<Department[]>('/departments/')
+    return apiFetchPaginated<Department>('/departments/')
   },
 
   /**
    * Fetch all teachers
    */
   async getTeachers(): Promise<Teacher[]> {
-    return apiFetch<Teacher[]>('/teachers/')
+    return apiFetchPaginated<Teacher>('/teachers/')
   },
 
   /**
    * Fetch all students
    */
   async getStudents(): Promise<Student[]> {
-    return apiFetch<Student[]>('/students/')
+    return apiFetchPaginated<Student>('/students/')
   },
 
   /**
    * Fetch all subjects
    */
   async getSubjects(): Promise<Subject[]> {
-    return apiFetch<Subject[]>('/subjects/')
+    return apiFetchPaginated<Subject>('/subjects/')
   },
 
   /**
    * Fetch all rooms
    */
   async getRooms(): Promise<Room[]> {
-    return apiFetch<Room[]>('/rooms/')
+    return apiFetchPaginated<Room>('/rooms/')
   },
 
   /**
